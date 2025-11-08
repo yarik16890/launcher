@@ -1,0 +1,21 @@
+[
+  {
+    "modid": "multapiary",
+    "name": "Multi-Apiary",
+    "description": "An addon for Forestry that adds a multi-apiary.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": [
+      "YourName"
+    ],
+    "credits": "Created by YourName",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": [
+      "Forge",
+      "Forestry"
+    ]
+  }
+]
