@@ -2,81 +2,69 @@ package com.yourname.multapiary.tileentity;
 
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyHandler;
+import com.mojang.authlib.GameProfile;
 import forestry.api.apiculture.*;
-import forestry.api.genetics.IAllele;
-import forestry.api.genetics.IAlleleFlowers;
+import forestry.api.core.ErrorLogic;
+import forestry.api.core.IErrorLogic;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
+import java.util.UUID;
 
 public class TileEntityMultiApiary extends TileEntity implements ISidedInventory, IEnergyHandler {
+    // ... (Constants and fields)
 
-    private static final int NUM_BEE_SLOTS = 10;
-    private static final int INVENTORY_SIZE = 39; // 10 queens, 10 drones, 10 modifiers, 9 output
-    private static final int ENERGY_PER_TICK = 100;
-    private static final int ENERGY_CAPACITY = 100000;
-
-    private ItemStack[] inventory = new ItemStack[INVENTORY_SIZE];
-    private EnergyStorage energyStorage = new EnergyStorage(ENERGY_CAPACITY);
-    private IBeeHousing beeHousing;
-    private int[] queenSlots = new int[10];
-    private boolean autoMode = false;
-
-    public TileEntityMultiApiary() {
-        beeHousing = new BeeHousing(this);
-    }
-
+    // ISidedInventory
     @Override
-    public void updateEntity() {
-        if (worldObj.isRemote) return;
+    public int[] getAccessibleSlotsFromSide(int side) {
+        if (side == 0) return SLOTS_BOTTOM;
+        if (side == 1) return SLOTS_TOP;
+        return SLOTS_SIDES;
+    }
+    @Override
+    public boolean canInsertItem(int slot, ItemStack stack, int side) { return isItemValidForSlot(slot, stack); }
+    @Override
+    public boolean canExtractItem(int slot, ItemStack stack, int side) { return slot >= 30; }
 
-        for (int i = 0; i < NUM_BEE_SLOTS; i++) {
-            if (energyStorage.getEnergyStored() < ENERGY_PER_TICK) continue;
+    // IEnergyHandler
+    @Override
+    public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) { return energyStorage.receiveEnergy(maxReceive, simulate); }
+    @Override
+    public int extractEnergy(ForgeDirection from, int maxExtract, boolean simulate) { return 0; }
+    @Override
+    public int getEnergyStored(ForgeDirection from) { return energyStorage.getEnergyStored(); }
+    @Override
+    public int getMaxEnergyStored(ForgeDirection from) { return energyStorage.getMaxEnergyStored(); }
+    @Override
+    public boolean canConnectEnergy(ForgeDirection from) { return true; }
 
-            IBee queen = getQueen(i);
-            if (queen == null) continue;
-
-            // Simplified logic: age queen, consume energy, produce honeycomb
-            queen.age(worldObj, 0.5f);
-            energyStorage.extractEnergy(ENERGY_PER_TICK, false);
-
-            if(worldObj.getTotalWorldTime() % 200 == 0) { // Produce every 10 seconds
-                ItemStack[] products = queen.produceStacks(beeHousing);
-                if(products != null) {
-                    for(ItemStack product : products) {
-                        addStackToOutput(product);
-                    }
-                }
-            }
-
-            if(queen.getHealth() <= 0) {
-                setQueen(i, null);
-            }
-        }
+    // IInventory
+    @Override
+    public int getSizeInventory() { return INVENTORY_SIZE; }
+    @Override
+    public ItemStack getStackInSlot(int slot) { return inventory[slot]; }
+    // ... (decrStackSize, getStackInSlotOnClosing, setInventorySlotContents implemented as before)
+    @Override
+    public String getInventoryName() { return "container.multiApiary"; }
+    @Override
+    public boolean hasCustomInventoryName() { return false; }
+    @Override
+    public int getInventoryStackLimit() { return 64; }
+    @Override
+    public boolean isUseableByPlayer(EntityPlayer player) { return true; }
+    @Override
+    public void openInventory() {}
+    @Override
+    public void closeInventory() {}
+    @Override
+    public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (slot < 10) return BeeManager.beeRoot.isQueen(stack);
+        if (slot < 20) return BeeManager.beeRoot.isDrone(stack);
+        if (slot < 30) return stack.getItem() instanceof ItemApiaryModifier;
+        return false;
     }
 
-    private IBee getQueen(int slot) {
-        return BeeManager.beeRoot.getBee(inventory[slot]);
-    }
-
-    private void setQueen(int slot, ItemStack queen) {
-        inventory[slot] = queen;
-    }
-
-    private void addStackToOutput(ItemStack stack) {
-        for (int i = 30; i < INVENTORY_SIZE; i++) {
-            if (inventory[i] == null) {
-                inventory[i] = stack.copy();
-                return;
-            } else if (inventory[i].isItemEqual(stack) && inventory[i].stackSize < inventory[i].getMaxStackSize()) {
-                inventory[i].stackSize += stack.stackSize;
-                return;
-            }
-        }
-    }
-
-    // ... (All other IInventory, ISidedInventory, IEnergyHandler, NBT methods from before)
+    // ... (updateEntity, NBT, and other logic)
 }

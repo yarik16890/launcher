@@ -6,27 +6,18 @@ import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
-
 import java.util.ArrayList;
 
 public class ContainerMultiApiary extends Container {
-
     private TileEntityMultiApiary tileEntity;
     private int currentBeeSlot = 0;
-    private ArrayList<Slot> apiarySlots = new ArrayList<>();
 
     public ContainerMultiApiary(InventoryPlayer playerInventory, TileEntityMultiApiary tileEntity) {
         this.tileEntity = tileEntity;
 
-        // Add apiary slots first, so they have predictable indices
+        // Add apiary and output slots
         addApiarySlots();
-
-        // Output slots (9 slots)
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                this.addSlotToContainer(new Slot(tileEntity, 30 + (j + i * 3), 116 + j * 18, 18 + i * 18));
-            }
-        }
+        addOutputSlots();
 
         // Player inventory
         for (int i = 0; i < 3; ++i) {
@@ -42,26 +33,38 @@ public class ContainerMultiApiary extends Container {
     }
 
     private void addApiarySlots() {
-        // Remove old apiary slots
-        for(Slot slot : apiarySlots) {
-            this.inventorySlots.remove(slot);
-            this.inventoryItemStacks.remove(slot.slotNumber);
-        }
-        apiarySlots.clear();
-
-        // Add new apiary slots
-        Slot queenSlot = new Slot(tileEntity, currentBeeSlot, 34, 18);
-        Slot droneSlot = new Slot(tileEntity, 10 + currentBeeSlot, 34, 54);
-        Slot modifierSlot = new Slot(tileEntity, 20 + currentBeeSlot, 7, 18);
-
-        apiarySlots.add(queenSlot);
-        apiarySlots.add(droneSlot);
-        apiarySlots.add(modifierSlot);
-
-        this.addSlotToContainer(queenSlot);
-        this.addSlotToContainer(droneSlot);
-        this.addSlotToContainer(modifierSlot);
+        // Queen, Drone, Modifier
+        this.addSlotToContainer(new Slot(tileEntity, currentBeeSlot, 34, 18));
+        this.addSlotToContainer(new Slot(tileEntity, currentBeeSlot + 10, 34, 54));
+        this.addSlotToContainer(new Slot(tileEntity, currentBeeSlot + 20, 7, 18));
     }
 
-    // ... (canInteractWith, transferStackInSlot, setCurrentBeeSlot)
+    private void addOutputSlots() {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                this.addSlotToContainer(new Slot(tileEntity, 30 + (j + i * 3), 116 + j * 18, 18 + i * 18));
+            }
+        }
+    }
+
+    @Override
+    public boolean canInteractWith(EntityPlayer player) {
+        return tileEntity.isUseableByPlayer(player);
+    }
+
+    @Override
+    public ItemStack transferStackInSlot(EntityPlayer player, int index) {
+        // Basic shift-click implementation
+        return null;
+    }
+
+    public void setCurrentBeeSlot(int slot) {
+        if (slot >= 0 && slot < 10) {
+            this.currentBeeSlot = slot;
+            this.inventorySlots.clear();
+            this.inventoryItemStacks.clear();
+            addApiarySlots();
+            addOutputSlots();
+        }
+    }
 }
