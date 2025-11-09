@@ -1,70 +1,36 @@
-package com.yourname.multapiary.tileentity;
+// ... (в методе updateEntity класса TileEntityMultiApiary, после блока if (logic.canWork()))
 
-import cofh.api.energy.EnergyStorage;
-import cofh.api.energy.IEnergyHandler;
-import com.mojang.authlib.GameProfile;
-import forestry.api.apiculture.*;
-import forestry.api.core.ErrorLogic;
-import forestry.api.core.IErrorLogic;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.common.util.ForgeDirection;
-import java.util.UUID;
+        // Auto-mode logic
+        if (autoMode) {
+            IBee queen = BeeManager.beeRoot.getMember(beeInventory.getQueen());
+            if (queen == null) {
+                // Find a new princess/queen and a drone from the output inventory to insert
+                ItemStack newQueen = null;
+                ItemStack newDrone = null;
+                int queenSlot = -1;
+                int droneSlot = -1;
 
-public class TileEntityMultiApiary extends TileEntity implements ISidedInventory, IEnergyHandler {
-    // ... (Constants and fields)
+                for (int j = OUTPUT_SLOTS_START; j < INVENTORY_SIZE; j++) {
+                    ItemStack stack = inventory[j];
+                    if (stack != null) {
+                        if (newQueen == null && BeeManager.beeRoot.isMember(stack, EnumBeeType.PRINCESS) || BeeManager.beeRoot.isMember(stack, EnumBeeType.QUEEN)) {
+                            newQueen = stack;
+                            queenSlot = j;
+                        } else if (newDrone == null && BeeManager.beeRoot.isMember(stack, EnumBeeType.DRONE)) {
+                            newDrone = stack;
+                            droneSlot = j;
+                        }
+                    }
+                }
 
-    // ISidedInventory
-    @Override
-    public int[] getAccessibleSlotsFromSide(int side) {
-        if (side == 0) return SLOTS_BOTTOM;
-        if (side == 1) return SLOTS_TOP;
-        return SLOTS_SIDES;
-    }
-    @Override
-    public boolean canInsertItem(int slot, ItemStack stack, int side) { return isItemValidForSlot(slot, stack); }
-    @Override
-    public boolean canExtractItem(int slot, ItemStack stack, int side) { return slot >= 30; }
+                if (newQueen != null && newDrone != null) {
+                    beeInventory.setQueen(newQueen);
+                    beeInventory.setDrone(newDrone);
+                    inventory[queenSlot] = null;
+                    inventory[droneSlot] = null;
+                    markDirty();
+                }
+            }
+        }
 
-    // IEnergyHandler
-    @Override
-    public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) { return energyStorage.receiveEnergy(maxReceive, simulate); }
-    @Override
-    public int extractEnergy(ForgeDirection from, int maxExtract, boolean simulate) { return 0; }
-    @Override
-    public int getEnergyStored(ForgeDirection from) { return energyStorage.getEnergyStored(); }
-    @Override
-    public int getMaxEnergyStored(ForgeDirection from) { return energyStorage.getMaxEnergyStored(); }
-    @Override
-    public boolean canConnectEnergy(ForgeDirection from) { return true; }
-
-    // IInventory
-    @Override
-    public int getSizeInventory() { return INVENTORY_SIZE; }
-    @Override
-    public ItemStack getStackInSlot(int slot) { return inventory[slot]; }
-    // ... (decrStackSize, getStackInSlotOnClosing, setInventorySlotContents implemented as before)
-    @Override
-    public String getInventoryName() { return "container.multiApiary"; }
-    @Override
-    public boolean hasCustomInventoryName() { return false; }
-    @Override
-    public int getInventoryStackLimit() { return 64; }
-    @Override
-    public boolean isUseableByPlayer(EntityPlayer player) { return true; }
-    @Override
-    public void openInventory() {}
-    @Override
-    public void closeInventory() {}
-    @Override
-    public boolean isItemValidForSlot(int slot, ItemStack stack) {
-        if (slot < 10) return BeeManager.beeRoot.isQueen(stack);
-        if (slot < 20) return BeeManager.beeRoot.isDrone(stack);
-        if (slot < 30) return stack.getItem() instanceof ItemApiaryModifier;
-        return false;
-    }
-
-    // ... (updateEntity, NBT, and other logic)
-}
+// ... (остальной код метода)
